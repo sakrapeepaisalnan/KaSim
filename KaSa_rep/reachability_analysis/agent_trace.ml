@@ -1244,13 +1244,14 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
       creation
   in
   let empty = Ckappa_sig.Views_intbdu.build_variables_list [] in
-  let error, (pre, low, on_stack, scc, bridges, log_info) =
+  let error, (n, pre, low, on_stack, scc, bridges, log_info) =
     Ckappa_sig.Agent_type_quick_nearly_Inf_Int_storage_Imperatif.fold
       parameters
       error
       (fun parameters error agent_type map
-        (pre,low,on_stack,scc, bridges,log_info) ->
-         let error, support =
+        (n, pre,low,on_stack,scc, bridges,log_info) ->
+        let n = n+1 in
+        let error, support =
            Ckappa_sig.Agent_map_and_set.Map.find_default_without_logs parameters error
              LabelMap.empty agent_type support
          in
@@ -1271,7 +1272,7 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
              Exception.warn parameters error error' __POS__ Exit
          in
          Wrapped_modules.LoggedIntMap.fold
-           (fun _ mvbdu (error, (pre,low,on_stack,scc,bridges,log_info)) ->
+           (fun _ mvbdu (error, (n,pre,low,on_stack,scc,bridges,log_info)) ->
               try
                 begin
                   let sites =
@@ -1440,7 +1441,7 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
                           (Remanent_parameters.get_logger parameters)
                       with
                       | Some channel -> channel
-                      | None -> stdout   
+                      | None -> stdout
                   in
                   let error', init_list =
                     Ckappa_sig.Agent_map_and_set.Map.find_default_without_logs
@@ -1690,18 +1691,30 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
                       graph bridges
                   in
                   error,
-                  (pre,low,on_stack,scc,bridges,log_info)
+                  (n,pre,low,on_stack,scc,bridges,log_info)
                 end
-              with Sys.Break -> error, (pre,low,on_stack,scc,bridges,log_info)
+              with Sys.Break -> error, (n,pre,low,on_stack,scc,bridges,log_info)
            )
            map
-           (error, (pre,low,on_stack,scc,bridges,log_info)))
+           (error, (n,pre,low,on_stack,scc,bridges,log_info)))
       output
-      (pre,low,on_stack,scc,bridges,log_info)
+      (0,pre,low,on_stack,scc,bridges,log_info)
+  in
+  let _ =
+    Loggers.fprintf
+      (Remanent_parameters.get_logger parameters)
+      "TCCB: %i local traces\n"
+      n
   in
   let bridges =
     if Remanent_parameters.get_compute_separating_transitions parameters
     then
+      let _ =
+        Loggers.fprintf
+          (Remanent_parameters.get_logger parameters)
+          "TCCB: %i separating transitions\n"
+          (List.length bridges)
+      in
       Some bridges
     else
       None

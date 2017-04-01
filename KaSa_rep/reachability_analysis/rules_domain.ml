@@ -4,7 +4,7 @@
    * Jérôme Feret & Ly Kim Quyen, project Antique, INRIA Paris
    *
    * Creation: 2016, the 30th of January
-   * Last modification: Time-stamp: <Mar 29 2017>
+   * Last modification: Time-stamp: <Apr 01 2017>
    *
    * Abstract domain to record live rules
    *
@@ -117,6 +117,12 @@ struct
     let kappa_handler = Analyzer_headers.get_kappa_handler static in
     let parameters = Analyzer_headers.get_parameter static in
     let nrules = Handler.nrules parameters error kappa_handler in
+    let _ =
+      Loggers.fprintf
+        (Remanent_parameters.get_logger parameters)
+        "TCCB: %i rules\n"
+        nrules
+    in
     let error, init_dead_rule_array =
       if nrules = 0
       then

@@ -4,7 +4,7 @@
    * Jérôme Feret & Ly Kim Quyen, project Antique, INRIA Paris
    *
    * Creation: 2016, the 30th of January
-   * Last modification: Time-stamp: <Mar 29 2017>
+   * Last modification: Time-stamp: <Apr 01 2017>
    *
    * Abstract domain to record live rules
    *
@@ -273,6 +273,12 @@ struct
     in
     let kappa_handler = Analyzer_headers.get_kappa_handler static in
     let nagents = Ckappa_sig.int_of_agent_name (Handler.nagents parameters error kappa_handler) - 1 in
+    let _ =
+      Loggers.fprintf
+        (Remanent_parameters.get_logger parameters)
+        "TCCB: %i agents\n"
+        (nagents+1)
+    in
     let error, init_seen_agents_array =
       if nagents < 0
       then
