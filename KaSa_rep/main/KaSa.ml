@@ -4,7 +4,7 @@
  * Jérôme Feret, projet Abstraction/Antique, INRIA Paris-Rocquencourt
  *
  * Creation: December, the 18th of 2010
- * Last modification: Time-stamp: <Mar 03 2017>
+ * Last modification: Time-stamp: <Apr 01 2017>
  * *
  *
  * Copyright 2010,2011 Institut National de Recherche en Informatique et
@@ -12,6 +12,7 @@
  * under the terms of the GNU Library General Public License *)
 
 let main () =
+  let t_init = Sys.time () in
   let errors = Exception.empty_error_handler in
   let _, parameters, _ = Get_option.get_option errors in
   let module A =
@@ -144,6 +145,10 @@ let main () =
       state, None
   in
   let _ = Exception.print parameters (Export_to_KaSa.get_errors state) in
+  let t_end = Sys.time () in
+  let _ = Loggers.fprintf (Remanent_parameters.get_logger parameters)
+      "TCCB: %f s CPU" (t_end-.t_init)
+  in
   ()
 
 let () = main ()
