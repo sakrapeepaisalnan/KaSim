@@ -12,7 +12,7 @@
    * en Informatique et en Automatique.
    * All rights reserved.  This file is distributed
    * under the terms of the GNU Library General Public License *)
-
+let dead_rules = ref None
 let local_trace = false
 
 module Domain =
@@ -133,6 +133,7 @@ struct
           parameters error (nrules-1)
           (fun _ error _ -> error, false)
     in
+    let () = dead_rules := Some init_dead_rule_array in    
     let init_global_dynamic_information =
       {
         global = dynamic;
@@ -264,6 +265,12 @@ struct
            error, if not bool then i::list else list
         )
         array []
+    in
+    let _ =
+      Loggers.fprintf
+        (Remanent_parameters.get_logger parameters)
+        "TCCB: %i dead rules\n"
+        (List.length list)
     in
     error, dynamic, Remanent_state.set_dead_rules list kasa_state
 

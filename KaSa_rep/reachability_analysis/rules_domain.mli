@@ -4,7 +4,7 @@
   * Jérôme Feret & Ly Kim Quyen, projet Abstraction, INRIA Paris-Rocquencourt
   *
   * Creation: 2016, the 30th of January
-  * Last modification: Time-stamp: <Jul 02 2016>
+  * Last modification: Time-stamp: <Apr 01 2017>
   *
   * A monolitich domain to deal with all concepts in reachability analysis
   * This module is temporary and will be split according to different concepts
@@ -17,4 +17,5 @@
 
 (** This domain tracks which rules can be applied, and warns other domains at the first application of a rule *)
 
+val dead_rules: bool Ckappa_sig.Rule_nearly_Inf_Int_storage_Imperatif.t option ref
 module Domain:Analyzer_domain_sig.Domain

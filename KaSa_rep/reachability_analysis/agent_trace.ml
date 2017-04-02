@@ -395,13 +395,15 @@ let compute_full_support parameters error ag_id rule =
         error, Mod (name,list,list',list'',list''')
     end
 
-let build_support parameters error rules =
+let build_support parameters error rules dead_rules =
   Ckappa_sig.Rule_nearly_Inf_Int_storage_Imperatif.fold
     parameters error
     (fun parameters error r_id rule ->
        Ckappa_sig.Agent_id_quick_nearly_Inf_Int_storage_Imperatif.fold
          parameters error
          (fun parameters error ag_id _  (map, creation, degradation) ->
+            if dead_rules r_id then error, (map, creation, degradation)
+            else
             match
               compute_full_support parameters error ag_id rule
             with
@@ -512,12 +514,14 @@ let pw parameters error list =
          acc acc)
     map [[]]
 
-let smash_side_effect parameters error static rules =
+let smash_side_effect parameters error static rules dead_rules =
   let error, init =
     Ckappa_sig.Agent_type_nearly_Inf_Int_storage_Imperatif.create parameters error 0
   in
   Ckappa_sig.AgentRule_map_and_set.Map.fold
     (fun (agent_name,rule_id) list (error,map) ->
+       if dead_rules rule_id then (error, map)
+       else
        let error, old_asso =
          match Ckappa_sig.Agent_type_nearly_Inf_Int_storage_Imperatif.unsafe_get
                  parameters error
@@ -1177,6 +1181,24 @@ let print logger parameters compil handler_kappa handler error transition_system
   error
 
 let agent_trace parameters log_info error handler static handler_kappa compil output =
+  let dead_rules =
+    match !Rules_domain.dead_rules with
+    | None ->
+      (fun _ -> false)
+    | Some array ->
+      fun i ->
+        let error, b =
+          Ckappa_sig.Rule_nearly_Inf_Int_storage_Imperatif.get
+parameters error
+          i
+          array
+        in
+        match b with
+          Some false ->
+           true
+        | None | Some true ->
+          false
+  in
   let bridges = [] in
   let error, low =
     Graphs.Nodearray.create parameters error 1
@@ -1192,13 +1214,19 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
   in
   let () = Ckappa_sig.Views_intbdu.import_handler handler in
   let rules = compil.Cckappa_sig.rules in
+  (*let rules =
+    List.filter
+      (fun rules ->
+         dead_rules rules.Cckappa_sig.e_rule_c_rule.Ckappa_sig.c_rule_id)
+      rules
+    in*)
   let init = compil.Cckappa_sig.init in
   let error, side_effects =
     smash_side_effect
-      parameters error static rules
+      parameters error static rules dead_rules
   in
   let error, (support, creation, degradation) =
-    build_support parameters error rules
+    build_support parameters error rules dead_rules
   in
   let error, init =
     Int_storage.Nearly_inf_Imperatif.fold
@@ -1357,7 +1385,9 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
                     Ckappa_sig.Rule_nearly_Inf_Int_storage_Imperatif.fold
                       parameters error
                       (fun parameters error r_id list support ->
-                         let error, support, _ =
+                         if dead_rules r_id then error, support
+                         else
+                           let error, support, _ =
                            List.fold_left
                              (fun (error, support, id) list ->
                                 let error', test =
@@ -1706,6 +1736,7 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
       "TCCB: %i local traces\n"
       n
   in
+  let bridges_l = bridges in
   let bridges =
     if Remanent_parameters.get_compute_separating_transitions parameters
     then
@@ -1715,7 +1746,30 @@ let agent_trace parameters log_info error handler static handler_kappa compil ou
           "TCCB: %i separating transitions\n"
           (List.length bridges)
       in
-      Some bridges
+      let bridges =
+        List.rev_map (fun (_,(a:Ckappa_sig.c_rule_id),_) -> a) bridges
+      in
+      let bridges =
+        List.sort
+          compare
+          bridges
+      in
+      let rec aux l current sol =
+        match l with [] -> sol
+                   | t::q when t=current -> aux q current sol
+                   | t::q ->
+                     aux q t (t::sol)
+      in
+      let bridges =
+        match bridges with [] -> [] | t::q -> aux q t [t]
+      in
+      let _ =
+        Loggers.fprintf
+          (Remanent_parameters.get_logger parameters)
+          "TCCB: %i rules in separating transitions\n"
+          (List.length bridges)
+      in
+      Some bridges_l
     else
       None
   in
