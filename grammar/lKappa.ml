@@ -1378,6 +1378,7 @@ let create_sig l =
     (fun (name,intf,_) -> (name,create_t intf)) l
 
 let compil_of_ast ~new_syntax overwrite c =
+  let c' = Ast.compile_counters c in
   let c =
     if c.Ast.signatures = [] && c.Ast.tokens = []
     then Ast.implicit_signature c
