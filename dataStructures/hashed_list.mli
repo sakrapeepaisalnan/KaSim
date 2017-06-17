@@ -14,6 +14,11 @@ sig
   val empty: hashed_list
   val print: Format.formatter -> hashed_list -> unit
   val print_cache: Format.formatter -> cache -> unit
+
+  module Array: Int_storage_light.Storage
+  with type key=hashed_list
+   and type dimension = int
+
 end
 
 module type Hash =
@@ -31,5 +36,9 @@ sig
   val empty : hashed_list
   val print : Format.formatter -> hashed_list -> unit
   val print_cache : Format.formatter -> cache -> unit
+
+  module Array: Int_storage_light.Storage
+  with type key=hashed_list
+   and type dimension = int
 
 end

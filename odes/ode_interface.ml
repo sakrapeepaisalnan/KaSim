@@ -130,7 +130,7 @@ type mixture = Edges.t(* not necessarily connected, fully specified *)
 type chemical_species = Pattern.cc
 (* connected, fully specified *)
 
-type canonic_species = Pattern.id (* chemical species in canonic form *)
+type canonic_species = LKappa_auto.RuleCache.hashed_list  (* chemical species in canonic form *)
 
 module type CanSet =
 sig
@@ -151,14 +151,14 @@ end
 
 module CanSet  =
 struct
-  type t = unit Pattern.Array.t
+  type t = unit LKappa_auto.Array.t
   let fold = ()
 end
 
 module CanMap =
 struct
-  include Pattern.Array
-  let create () = Pattern.Array.create 0
+  include LKappa_auto.Array
+  let create () = create 10000
 end
 
 type pattern = Pattern.id array
@@ -207,21 +207,21 @@ let compare_connected_component = Pattern.compare_canonicals
 let print_connected_component ?compil =
   Pattern.print ~new_syntax:false ?domain:(domain_opt compil) ~with_id:false
 
-let print_canonic_species ?compil ?dotnet =
-  Pattern.print ~new_syntax:false ?dotnet ?domain:(domain_opt compil) ~with_id:false
+let print_canonic_species ?compil ?dotnet _ _ = ()
+(*Pattern.print ~new_syntax:false ?dotnet ?domain:(domain_opt compil) ~with_id:false*)
 
 let canonic_form compil cache x =
-  let cc_cache = cache.cc_cache in
-  let sigs = Model.signatures compil.environment in
-  let
-    cc_cache, id =
-    Patterns_extra.pattern_cc_to_id
-      ~sigs
-      cc_cache
+  let rule_cache = cache.rule_cache in
+  let x = Patterns_extra.species_to_lkappa_rule
+      ~sigs:(Model.signatures compil.environment) x
+  in
+  let rule_cache, id =
+    LKappa_auto.cannonic_form
+      rule_cache
       x
   in
-  {cache with cc_cache = cc_cache },
-  id
+  {cache with rule_cache = rule_cache },
+  Some id
 
 let connected_components_of_patterns = Array.to_list
 

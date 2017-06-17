@@ -676,3 +676,5 @@ let n_cc cache rule =
     mixture_to_species_map Remanent_parameters_sig.No_correction cache rule
   in
   cache, ncc_of_map map
+
+module Array = RuleCache.Array

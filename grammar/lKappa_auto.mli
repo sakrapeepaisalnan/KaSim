@@ -28,3 +28,7 @@ val n_cc: cache -> LKappa.rule -> cache * int
 
 val cannonic_form: cache -> LKappa.rule ->
   cache * RuleCache.hashed_list
+
+module Array: Int_storage_light.Storage
+    with type key=RuleCache.hashed_list
+     and type dimension = int

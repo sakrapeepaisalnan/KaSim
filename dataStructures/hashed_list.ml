@@ -13,6 +13,9 @@ val cons : cache -> elt -> hashed_list -> cache * hashed_list
 val empty : hashed_list
 val print : Format.formatter -> hashed_list -> unit
 val print_cache : Format.formatter -> cache -> unit
+module Array: Int_storage_light.Storage
+  with type key=hashed_list
+   and type dimension = int
 
 end
 
@@ -135,4 +138,10 @@ module Make =
                    Format.fprintf formatter
                      "(%i,%i)->%i \n" a b k) opt)
         cache.cons
+
+    module Array :
+      Int_storage_light.Storage
+      with type key = hashed_list and type dimension = int
+      =
+      Int_storage_light.Quick_Nearly_inf_Imperatif
   end
