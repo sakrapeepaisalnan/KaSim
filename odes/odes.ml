@@ -1,6 +1,6 @@
 (** Network/ODE generation
   * Creation: 15/07/2016
-  * Last modification: Time-stamp: <May 21 2017>
+  * Last modification: Time-stamp: <Jun 17 2017>
 *)
 
 let local_trace = false
@@ -46,7 +46,7 @@ struct
                              -> "(1)")
               (match dir with Rule_modes.Direct -> "->" | Rule_modes.Op -> "<-")
               cc_id
-              (I.print_connected_component ?compil:None) cc
+              (I.print_connected_component ?dotnet:None ?compil:None) cc
           in
           let () = I.print_rule_id a r in
           let () = Format.fprintf a "cc_id: %i \n" cc_id in
@@ -81,8 +81,103 @@ struct
           | Token x -> Format.fprintf log "%i" x
           | Dummy -> ()
       end)
-  module VarSet = VarSetMap.Set
-  module VarMap = VarSetMap.Map
+
+  type 'a var_array =
+    {occ: 'a I.CanMap.t ;
+     emb: 'a I.CanMap.t ;
+     tok: 'a Int_storage_light.Quick_Nearly_inf_Imperatif.t
+    }
+
+  module VarSet =
+  struct
+    type t = unit var_array
+    let fold f a acc =
+      I.CanMap.fold
+        (fun i _ acc -> f (Nembed i) acc)
+        (a.emb)
+        (I.CanMap.fold
+           (fun i _ acc -> f (Noccurrences i) acc)
+           (a.occ)
+           (Int_storage_light.Quick_Nearly_inf_Imperatif.fold
+              (fun i _ acc -> f (Token i) acc)
+              (a.tok)
+              acc))
+    let mem k a =
+      let opt =
+        match k with
+      | Nembed i ->
+        I.CanMap.unsafe_get i a.emb
+      | Noccurrences i ->
+        I.CanMap.unsafe_get i a.occ
+      | Token i ->
+        Int_storage_light.Quick_Nearly_inf_Imperatif.unsafe_get i a.tok
+      | Dummy -> None
+      in
+      match opt with
+      | None -> false
+      | Some _ -> true
+
+    let empty () =
+      {
+        occ = I.CanMap.create ();
+        emb = I.CanMap.create ();
+        tok = Int_storage_light.Quick_Nearly_inf_Imperatif.create 0
+      }
+
+    let add k t =
+      match k with
+      | Nembed i ->
+        {t with emb = I.CanMap.set i () t.emb}
+      | Noccurrences i ->
+        {t with occ = I.CanMap.set i () t.occ}
+      | Token i ->
+        {t with
+         tok = Int_storage_light.Quick_Nearly_inf_Imperatif.set i () t.tok}
+      | Dummy -> t
+  end
+
+  module VarMap =
+    struct
+      type 'a t = 'a var_array
+      let empty () =
+        {
+          occ = I.CanMap.create ();
+          emb = I.CanMap.create ();
+          tok = Int_storage_light.Quick_Nearly_inf_Imperatif.create 0
+        }
+        let add k data t =
+          match k with
+          | Nembed i ->
+            {t with emb = I.CanMap.set i data t.emb}
+          | Noccurrences i ->
+            {t with occ = I.CanMap.set i data t.occ}
+          | Token i ->
+            {t with
+             tok = Int_storage_light.Quick_Nearly_inf_Imperatif.set i data t.tok}
+          | Dummy -> t
+
+          let find_option k a =
+            match k with
+            | Nembed i ->
+              I.CanMap.unsafe_get i a.emb
+            | Noccurrences i ->
+              I.CanMap.unsafe_get i a.occ
+            | Token i ->
+              Int_storage_light.Quick_Nearly_inf_Imperatif.unsafe_get i a.tok
+            | Dummy -> None
+
+          let fold f a acc =
+            I.CanMap.fold
+              (fun i data acc -> f (Nembed i) data acc)
+              (a.emb)
+              (I.CanMap.fold
+                 (fun i data acc -> f (Noccurrences i) data acc)
+                 (a.occ)
+                 (Int_storage_light.Quick_Nearly_inf_Imperatif.fold
+                    (fun i data acc -> f (Token i) data acc)
+                    (a.tok)
+                    acc))
+    end
 
   type 'a decl =
     | Var of
@@ -250,9 +345,9 @@ struct
 
   let reset compil network =
     {network with
-      ode_variables = VarSet.empty ;
+     ode_variables = VarSet.empty () ;
       ode_vars_tab = Mods.DynArray.create 0 Dummy ;
-      id_of_ode_var = VarMap.empty ;
+     id_of_ode_var = VarMap.empty () ;
       species_tab = Mods.DynArray.create 0
           (I.dummy_chemical_species compil,1) ;
       cache = I.empty_cache compil ;
@@ -274,9 +369,9 @@ struct
     {
       rules = [] ;
       reactions = [] ;
-      ode_variables = VarSet.empty ;
+      ode_variables = VarSet.empty () ;
       ode_vars_tab = Mods.DynArray.create 0 Dummy ;
-      id_of_ode_var = VarMap.empty ;
+      id_of_ode_var = VarMap.empty () ;
       species_tab = Mods.DynArray.create 0
           (I.dummy_chemical_species compil,1) ;
       cache = I.empty_cache compil ;
@@ -375,7 +470,7 @@ struct
 
   let enrich_rule cache compil rule rule_id_with_mode =
     let lhs = I.lhs compil rule_id_with_mode rule in
-    let succ_last_cc_id,lhs_cc =
+    let _succ_last_cc_id,lhs_cc =
       List.fold_left
         (fun (counter,list) cc ->
            (next_cc_id counter,
@@ -455,9 +550,26 @@ struct
     let network, species =
       representative parameters compil (snd remanent) species
     in
+    let cache, canonic_opt =
+      I.canonic_form compil network.cache species
+    in
+    let network = {network with cache = cache} in
     let remanent = fst remanent, network in
-    translate_canonic_species compil
-      (I.canonic_form species) species remanent
+    match canonic_opt with
+    | None ->
+      let (s,i1,i2,i3) = __POS__ in
+      let () =
+        Loggers.fprintf
+          (Remanent_parameters.get_logger_err parameters)
+          "Internal bug %s %i %i %i" s i1 i2 i3
+      in
+      let () =
+        Loggers.print_newline (Remanent_parameters.get_logger_err parameters)
+      in
+      remanent, -1
+    | Some canonic ->
+      translate_canonic_species compil
+        canonic species remanent
 
   let translate_token token remanent =
     let id_opt =
@@ -475,9 +587,26 @@ struct
     let network, species =
       representative parameters compil (snd remanent) species
     in
+    let cache, canonic_opt =
+      I.canonic_form compil network.cache species
+    in
+    let network = {network with cache = cache} in
     let remanent = fst remanent, network in
-    translate_canonic_species compil
-      (I.canonic_form species) species remanent
+    match canonic_opt with
+    | None ->
+      let (s,i1,i2,i3) = __POS__ in
+      let () =
+        Loggers.fprintf
+          (Remanent_parameters.get_logger_err parameters)
+          "Internal bug %s %i %i %i" s i1 i2 i3
+      in
+      let () =
+        Loggers.print_newline (Remanent_parameters.get_logger_err parameters)
+      in
+      remanent, -1
+    | Some canonic ->
+      translate_canonic_species compil
+        canonic species remanent
 
   let petrify_species_list parameters compil l remanent =
     fold_left_swap
@@ -894,7 +1023,7 @@ struct
                                   Rule_modes.Direct -> "->"
                                 | Rule_modes.Op -> "<-")
                                id
-                               (I.print_connected_component ~compil)
+                               (I.print_connected_component ?dotnet:None ~compil)
                                b
                            in
                            let () =
@@ -1354,7 +1483,7 @@ struct
                  Rule_modes.RuleModeIdSet.add
                    (flatten_rate enriched_rule.rule_id_with_mode)
                    rate_set
-               in            
+               in
                let const_list = [] in
                let var_list = [] in
                let network,rate =
@@ -2341,7 +2470,7 @@ struct
                                               "%s%a"
                                               prefix
                                               (I.print_connected_component
-                                                 ~compil)
+                                                 ?dotnet:None ~compil)
                                               connected_component
                                           in true)
                                     ) false mixture
@@ -2712,7 +2841,7 @@ struct
                                                     fmt
                                                     "%s%a"
                                                     prefix
-                                                    (I.print_connected_component  ~compil)
+                                                    (I.print_connected_component  ?dotnet:None ~compil)
                                                     connected_component
                                                 in true)
                                          )
@@ -3014,7 +3143,7 @@ struct
     let () =
       if Sbml_backend.is_dotnet logger &&
         List.for_all
-          (fun (id,expr) -> Ode_loggers.is_time expr)
+          (fun (_id,expr) -> Ode_loggers.is_time expr)
           network.obs
       then (* No observable in the model *)
         ()

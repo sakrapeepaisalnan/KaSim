@@ -18,7 +18,7 @@ let cc_mix ?env =
          (fun _ f cc ->
             Format.fprintf
               f "|%a|"
-              (Pattern.print ~new_syntax:true ?domain ~with_id:false) cc) f ccs)
+              (Pattern.print ?dotnet:None ~new_syntax:true ?domain ~with_id:false) cc) f ccs)
 
 let alg_expr ?env =
   Alg_expr.print (cc_mix ?env) (Model.print_token ?env) (Model.print_alg ?env)
@@ -117,7 +117,7 @@ let modification ?env f m =
         | _ -> assert false
       else
         let boxed_cc _ =
-          Pattern.print ~new_syntax:true ?domain ~with_id:false in
+          Pattern.print ?dotnet:None ~new_syntax:true ?domain ~with_id:false in
         Format.fprintf f "$DEL %a %a" (alg_expr ?env) n
           (Pp.array Pp.comma boxed_cc)
           rule.Primitives.connected_components
@@ -162,20 +162,20 @@ let modification ?env f m =
       f "$TRACK @[%a@] [true]"
       (Pp.array
          Pp.comma
-         (fun _ -> Pattern.print ~new_syntax:true ?domain ~with_id:false)) cc
+           (fun _ -> Pattern.print ?dotnet:None ~new_syntax:true ?domain ~with_id:false)) cc
   | Primitives.CFLOWOFF (_,cc) ->
     Format.fprintf
       f "$TRACK %a [false]"
       (Pp.array
          Pp.comma
-         (fun _ -> Pattern.print ~new_syntax:true ?domain ~with_id:false)) cc
+         (fun _ -> Pattern.print ?dotnet:None ~new_syntax:true ?domain ~with_id:false)) cc
   | Primitives.SPECIES (fn,cc,_) ->
     Format.fprintf
       f "$SPECIES_OF %a @[%a@] [true]"
       (print_expr ?env) fn
       (Pp.array
          Pp.comma
-         (fun _ -> Pattern.print ~new_syntax:true ?domain ~with_id:false)) cc
+         (fun _ -> Pattern.print ?dotnet:None ~new_syntax:true ?domain ~with_id:false)) cc
   | Primitives.SPECIES_OFF fn ->
     Format.fprintf
       f "$SPECIES_OFF %a [false]"

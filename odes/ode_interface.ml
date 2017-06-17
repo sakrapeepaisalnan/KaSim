@@ -1,6 +1,6 @@
 (** Network/ODE generation
   * Creation: 22/07/2016
-  * Last modification: Time-stamp: <May 27 2017>
+  * Last modification: Time-stamp: <Jun 17 2017>
 *)
 
 type rule = Primitives.elementary_rule
@@ -130,7 +130,36 @@ type mixture = Edges.t(* not necessarily connected, fully specified *)
 type chemical_species = Pattern.cc
 (* connected, fully specified *)
 
-type canonic_species = chemical_species (* chemical species in canonic form *)
+type canonic_species = Pattern.id (* chemical species in canonic form *)
+
+module type CanSet =
+sig
+  type t
+  val fold: unit
+end
+
+module type CanMap =
+sig
+  type 'a t
+  val fold: (canonic_species -> 'a -> 'b -> 'b) ->
+    'a t -> 'b -> 'b
+  val create: unit  -> 'a t
+  val unsafe_get: canonic_species -> 'a t -> 'a option
+  val set: canonic_species -> 'a -> 'a t -> 'a t
+
+end
+
+module CanSet  =
+struct
+  type t = unit Pattern.Array.t
+  let fold = ()
+end
+
+module CanMap =
+struct
+  include Pattern.Array
+  let create () = Pattern.Array.create 0
+end
 
 type pattern = Pattern.id array
 (* not necessarity connected, maybe partially specified *)
@@ -155,7 +184,7 @@ let do_we_count_in_embeddings compil =
 let do_we_prompt_reactions compil =
   compil.show_reactions
 
-let print_chemical_species ?dotnet ?compil f =
+let print_chemical_species ?compil ?dotnet f =
   Format.fprintf f "@[<h>%a@]"
     (Pattern.print_cc
        ?dotnet
@@ -170,8 +199,6 @@ let print_token ?compil fmt k =
     (Model.print_token ?env:(environment_opt compil))
     k
 
-let print_canonic_species = print_chemical_species
-
 let nbr_automorphisms_in_chemical_species x =
   List.length (Pattern.automorphisms x)
 
@@ -180,7 +207,21 @@ let compare_connected_component = Pattern.compare_canonicals
 let print_connected_component ?compil =
   Pattern.print ~new_syntax:false ?domain:(domain_opt compil) ~with_id:false
 
-let canonic_form x = x
+let print_canonic_species ?compil ?dotnet =
+  Pattern.print ~new_syntax:false ?dotnet ?domain:(domain_opt compil) ~with_id:false
+
+let canonic_form compil cache x =
+  let cc_cache = cache.cc_cache in
+  let sigs = Model.signatures compil.environment in
+  let
+    cc_cache, id =
+    Patterns_extra.pattern_cc_to_id
+      ~sigs
+      cc_cache
+      x
+  in
+  {cache with cc_cache = cc_cache },
+  id
 
 let connected_components_of_patterns = Array.to_list
 
@@ -305,31 +346,6 @@ let n_cc cache compil rule  =
        cache)
     n_cc
     cache compil rule
-
-
-let valid_modes cache compil rule =
-  let id = rule.Primitives.syntactic_rule in
-  let cache, arity =n_cc cache compil rule in
-  let arity' = Array.length rule.Primitives.connected_components in
-  let mode = mode_of_rule compil rule in
-  let () = assert (arity' <= arity) in
-  cache,
-  if arity = arity' then
-    List.rev_map
-      (fun x -> id,x,mode)
-      (List.rev
-         (add_not_zero Rule_modes.Usual rule.Primitives.rate
-            (add_not_none_not_zero Rule_modes.Unary rule.Primitives.unary_rate [])))
-  else if arity'=1 && arity=2
-  then
-    let lkappa_rule = Model.get_ast_rule compil.environment id in
-    match lkappa_rule.LKappa.r_un_rate
-    with None -> []
-       | Some (e,_) ->
-         if is_zero e then []
-         else [id,Rule_modes.Unary_refinement,mode]
-  else
-    []
 
 let valid_modes cache compil rule =
   let id = rule.Primitives.syntactic_rule in

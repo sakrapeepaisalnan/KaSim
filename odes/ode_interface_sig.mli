@@ -1,6 +1,6 @@
 (** Network/ODE generation
   * Creation: 22/07/2016
-  * Last modification: Time-stamp: <Jun 12 2017>
+  * Last modification: Time-stamp: <Jun 17 2017>
 *)
 
 module type Interface =
@@ -18,6 +18,27 @@ sig
 
   type rule
 
+  module type CanSet =
+  sig
+    type t
+    val fold: unit
+
+  end
+
+  module type CanMap =
+  sig
+    type 'a t
+    val fold: (canonic_species -> 'a -> 'b -> 'b) ->
+      'a t -> 'b -> 'b
+    val create: unit  -> 'a t
+    val unsafe_get: canonic_species -> 'a t -> 'a option
+    val set: canonic_species -> 'a -> 'a t -> 'a t
+
+  end
+
+  module CanSet:CanSet
+  module CanMap:CanMap
+
   type init =
     ((connected_component array list,int) Alg_expr.e * rule
      * Locality.t) list
@@ -34,18 +55,19 @@ sig
     connected_component -> connected_component -> int
 
   val print_connected_component :
-    ?compil:compil -> Format.formatter -> connected_component -> unit
+    ?compil:compil -> ?dotnet:bool ->
+    Format.formatter -> connected_component -> unit
 
   val print_token :
     ?compil:compil -> Format.formatter -> int -> unit
 
   val print_chemical_species:
-    ?dotnet:bool
-    -> ?compil:compil -> Format.formatter -> chemical_species -> unit
+    ?compil:compil -> ?dotnet:bool ->
+    Format.formatter -> chemical_species -> unit
 
   val print_canonic_species:
-    ?dotnet:bool
-    -> ?compil:compil -> Format.formatter -> canonic_species -> unit
+    ?compil:compil -> ?dotnet:bool ->
+    Format.formatter -> canonic_species -> unit
 
   val rate_convention: compil ->
     Remanent_parameters_sig.rate_convention
@@ -55,7 +77,10 @@ sig
 
   val nbr_automorphisms_in_chemical_species: chemical_species -> int
 
-  val canonic_form: chemical_species -> canonic_species
+  val canonic_form:
+    compil -> cache ->
+    chemical_species ->
+    cache * (canonic_species option)
 
   val connected_components_of_patterns:
     pattern -> connected_component list

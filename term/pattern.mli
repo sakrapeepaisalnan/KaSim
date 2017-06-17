@@ -120,7 +120,7 @@ val print_cc :
   Format.formatter -> t -> unit
 
 val print :
-  new_syntax:bool -> ?domain:Env.t -> with_id:bool ->
+  new_syntax:bool -> ?dotnet:bool -> ?domain:Env.t -> with_id:bool ->
   Format.formatter -> id -> unit
 (** [print ~domain ?with_id:None form cc] *)
 
@@ -158,3 +158,6 @@ val merge_on_inf : PreEnv.t -> Renaming.t -> t -> t ->
 val length : t -> int
 
 module Set : SetMap.Set with type elt=id
+module Array: Int_storage_light.Storage
+  with type key=id
+   and type dimension = int

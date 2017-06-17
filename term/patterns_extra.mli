@@ -35,6 +35,12 @@ val pattern_id_to_cc:
   Pattern.id ->
   Pattern.cc option
 
+val pattern_cc_to_id:
+  sigs:Signature.s ->
+  Pattern.PreEnv.t ->
+  Pattern.cc ->
+  Pattern.PreEnv.t * (Pattern.id option)
+
 val raw_mixture_to_lkappa_rule: Raw_mixture.t -> LKappa.rule
 
 val species_to_lkappa_rule:

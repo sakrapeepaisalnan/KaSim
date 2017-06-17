@@ -973,12 +973,12 @@ end = struct
 
 end
 
-let print ~new_syntax ?domain ~with_id f id =
+let print ~new_syntax ?dotnet ?domain ~with_id f id =
   match domain with
   | None -> Format.pp_print_int f id
   | Some env ->
     let cc_id = if with_id then Some id else None in
-    print_cc ~new_syntax ~sigs:(Env.signatures env) ?cc_id ~with_id
+    print_cc ?dotnet ~new_syntax ~sigs:(Env.signatures env) ?cc_id ~with_id
       f env.Env.domain.(id).Env.content
 
 let embeddings_to_fully_specified domain a_id b =
@@ -1451,3 +1451,8 @@ let merge_on_inf env m g1 g2 =
   | (None,conflict) -> (None,conflict)
 
 let length cc = Mods.IntMap.size (cc.nodes)
+
+module Array :
+  Int_storage_light.Storage with type key = id and type dimension = int
+  =
+  Int_storage_light.Quick_Nearly_inf_Imperatif

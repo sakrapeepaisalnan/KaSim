@@ -136,7 +136,7 @@ let print_injections ?domain f roots_of_patterns =
        (fun pattern f roots ->
           Format.fprintf
             f "@[# @[%a@] ==>@ @[%a@]@]"
-            (Pattern.print ~new_syntax:true ?domain ~with_id:true) pattern
+            (Pattern.print ?dotnet:None ~new_syntax:true ?domain ~with_id:true) pattern
             IntCollection.print roots
        )
     ) roots_of_patterns
@@ -147,7 +147,7 @@ let print_unary_injections ?domain f roots_of_patterns =
        (fun pattern f root_maps ->
           Format.fprintf
             f "@[# @[%a@] ==>@ @[%a@]@]"
-            (Pattern.print ~new_syntax:true ?domain ~with_id:true) pattern
+            (Pattern.print ?dotnet:None ~new_syntax:true ?domain ~with_id:true) pattern
             (Pp.set Mods.IntMap.bindings Pp.space
                (fun f (_cc_id, roots) -> Mods.IntSet.print f roots))
             root_maps
